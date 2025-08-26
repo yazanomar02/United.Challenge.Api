@@ -11,7 +11,8 @@ namespace United.Challenge.Api.Controllers
     {
 
         [HttpPost("register")]
-        public IActionResult Register([FromBody] RegisterUser request)
+        public IActionResult Register([FromHeader(Name = "Idempotency-Key")] string idempotencyKey,
+    [FromBody] RegisterUser request)
         {
             return Created("api/users/123", new { message = "User registered successfully" });
         }

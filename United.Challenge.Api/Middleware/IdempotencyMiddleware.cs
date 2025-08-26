@@ -40,8 +40,16 @@ namespace United.Challenge.Api.Middleware
                 return;
             }
 
-            // Avoid collisions between lanes
-            var namespacedKey = $"{context.Request.Method}:{context.Request.Path}:{idempotencyKey}";
+            // قراءة Body الطلب
+            context.Request.EnableBuffering();
+            var bodyAsText = await new StreamReader(context.Request.Body).ReadToEndAsync();
+            context.Request.Body.Position = 0;
+
+            // حساب Hash للـBody
+            var bodyHash = ComputeHash(bodyAsText);
+
+            // إنشاء مفتاح الكاش مع الـBody Hash
+            var namespacedKey = $"{context.Request.Method}:{context.Request.Path}:{idempotencyKey}:{bodyHash}";
 
             // There is a response stored in the cache with the same key.
             if (_cache.TryGetValue(namespacedKey, out CachedResponse cached))
@@ -89,6 +97,17 @@ namespace United.Challenge.Api.Middleware
             memStream.Seek(0, SeekOrigin.Begin);
             await memStream.CopyToAsync(originalBody);
             context.Response.Body = originalBody;
+        }
+
+
+
+        // دالة لحساب Hash للـBody
+        private string ComputeHash(string input)
+        {
+            using var sha256 = System.Security.Cryptography.SHA256.Create();
+            var bytes = System.Text.Encoding.UTF8.GetBytes(input);
+            var hash = sha256.ComputeHash(bytes);
+            return Convert.ToBase64String(hash);
         }
     }
 }
